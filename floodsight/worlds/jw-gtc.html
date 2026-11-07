@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JW Marriott &amp; GTC Tower — Sketch World</title>
+<style>
+:root{--ink:#26231f;--paper:#f6f3ea;--panel:rgba(246,243,234,.92);--line:#26231f;--cu:#b8643a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--panel:rgba(36,33,29,.92);--ink:#ece6d8;--line:#ece6d8}}
+html,body{height:100%;margin:0;overflow:hidden;background:#f6f3ea;font-family:Georgia,"Times New Roman",serif;color:var(--ink)}
+canvas{display:block;position:fixed;inset:0;touch-action:none}
+#paper{position:fixed;inset:0;pointer-events:none;mix-blend-mode:multiply;
+background:radial-gradient(60% 40% at 8% 10%,rgba(160,170,180,.35),transparent 70%),radial-gradient(50% 35% at 95% 30%,rgba(150,185,205,.30),transparent 70%),radial-gradient(45% 30% at 85% 92%,rgba(205,170,110,.35),transparent 70%),radial-gradient(40% 30% at 5% 85%,rgba(180,185,170,.30),transparent 70%)}
+#grain{position:fixed;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .4 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
+.lbl{position:fixed;left:0;top:0;font:italic 13px/1 Georgia,serif;color:#26231f;white-space:nowrap;pointer-events:none;padding:2px 6px;border-bottom:1px solid #26231f;background:rgba(246,243,234,.7);will-change:transform;transition:opacity .3s}
+#hud{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:6px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:3px;max-width:calc(100vw - 24px)}
+#hud button{font:15px Georgia,serif;color:var(--ink);background:none;border:1px solid transparent;padding:10px 14px;cursor:pointer;border-radius:2px;transition:background .25s,color .25s}
+#hud button:hover{border-color:var(--line)}
+#hud button:focus-visible{outline:2px solid var(--cu);outline-offset:2px}
+#hud button[aria-pressed=true]{background:var(--ink);color:var(--panel)}
+#title{position:fixed;left:16px;top:calc(14px + env(safe-area-inset-top,0px));font-size:15px;line-height:1.3;background:var(--panel);padding:8px 12px;border-left:3px solid var(--cu)}
+#title small{display:block;opacity:.7;font-size:12px}
+#tele{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity .6s}
+#tele.on{opacity:1}
+#tele text{font:12px Georgia,serif;fill:#26231f}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="title">JW Marriott &amp; GTC Tower<small id="hint">Drag to look around a little</small></div>
+<svg id="tele" aria-hidden="true"><rect id="fb" fill="none" stroke="#b8643a" stroke-width="1.5" stroke-dasharray="6 4"/><path id="ch" stroke="#26231f" fill="none"/><text id="t1"></text><text id="t2"></text></svg>
+<div id="paper"></div><div id="grain"></div>
+<nav id="hud" aria-label="Camera views">
+<button data-v="sketch" aria-pressed="true">Sketch view</button>
+<button data-v="fly" aria-pressed="false">Drone fly-by</button>
+<button data-v="free" aria-pressed="false">Explore</button>
+</nav>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+const ink=0x26231f, W=innerWidth, H=innerHeight;
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(W,H);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
+document.body.prepend(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xf6f3ea);scene.fog=new THREE.Fog(0xf6f3ea,260,700);
+const cam=new THREE.PerspectiveCamera(42,W/H,1,1500);
+scene.add(new THREE.HemisphereLight(0xffffff,0xd8cdb8,.85));
+const sun=new THREE.DirectionalLight(0xfff2dc,1.4);sun.position.set(120,200,160);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-150,right:150,top:200,bottom:-60,far:600});scene.add(sun);
+
+const M={
+ con:new THREE.MeshStandardMaterial({color:0xece7da,roughness:.9}),
+ sand:new THREE.MeshStandardMaterial({color:0xd9ccb2,roughness:.9}),
+ glass:new THREE.MeshStandardMaterial({color:0x3a4654,roughness:.25,metalness:.5}),
+ steel:new THREE.MeshStandardMaterial({color:0x4b4f55,roughness:.5,metalness:.7}),
+ cu:new THREE.MeshStandardMaterial({color:0xb8643a,roughness:.6,metalness:.4}),
+ water:new THREE.MeshStandardMaterial({color:0x5fa8c8,roughness:.1,metalness:.2,emissive:0x1d4a63,emissiveIntensity:.3}),
+ dark:new THREE.MeshStandardMaterial({color:0x2a2724,roughness:.8}),
+ plant:new THREE.MeshStandardMaterial({color:0x6f8a5a,roughness:1}),
+ ground:new THREE.MeshStandardMaterial({color:0xe4ddcc,roughness:1})
+};
+const inkMat=new THREE.LineBasicMaterial({color:ink,transparent:true,opacity:.75});
+const disposables=[];
+function box(w,h,d,x,y,z,mat,edges=true){
+ const g=new THREE.BoxGeometry(w,h,d);const m=new THREE.Mesh(g,mat);m.position.set(x,y+h/2,z);m.castShadow=m.receiveShadow=true;
+ if(edges){m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),inkMat))}
+ scene.add(m);return m}
+
+// ground + perspective guide grid
+const gr=new THREE.Mesh(new THREE.PlaneGeometry(1400,1400),M.ground);gr.rotation.x=-Math.PI/2;gr.receiveShadow=true;scene.add(gr);
+const grid=new THREE.GridHelper(600,60,0x8a8478,0xb9b1a0);grid.position.y=.05;grid.material.transparent=true;grid.material.opacity=.35;scene.add(grid);
+
+// podium (ground lobby glass + slabs)
+box(110,4,62,0,0,0,M.glass,false);               // glazed ground lobby
+box(112,2.5,64,0,4,0,M.con);                      // slab
+box(110,4,62,0,6.5,0,M.glass,false);
+box(112,2.5,64,0,10.5,0,M.con);
+box(112,2,64,0,13,0,M.con);                       // pool deck slab
+for(let i=0;i<=20;i++)box(1.4,10.5,1.4,-54+i*5.4,0,31,M.con,false); // podium columns
+box(24,4,1,-36,0.2,31.5,M.cu,false);box(24,4,1,36,0.2,31.5,M.cu,false); // copper lower panels
+// stair (asymmetric)
+for(let i=0;i<9;i++)box(30-i*.8,.6,2.2,38,i*.6,38-i*2.2,M.con);
+
+// JW Marriott tower (left): concrete frame shell + curtain wall
+const JW={x:-34,z:-6,w:26,d:22,h:112,y0:15};
+box(JW.w,JW.h,JW.d,JW.x,JW.y0,JW.z,M.glass,false);
+box(4,JW.h,JW.d+1,JW.x-JW.w/2-1,JW.y0,JW.z,M.con);           // left shell
+box(JW.w+6,6,JW.d+1,JW.x,JW.y0+JW.h-6,JW.z,M.con);           // top band
+box(8,JW.h-4,5,JW.x+JW.w/2+3,JW.y0,JW.z+JW.d/2+2.5,M.con);   // core/utility fin
+box(18,40,JW.d-6,JW.x+22,JW.y0,JW.z-12,M.sand);               // rear set-back wing
+// instanced curtain-wall frames (floors + mullions)
+const floors=30,cols=14;
+const hMul=new THREE.InstancedMesh(new THREE.BoxGeometry(JW.w,.35,.3),M.dark,floors*2);
+const vMul=new THREE.InstancedMesh(new THREE.BoxGeometry(.3,JW.h-8,.3),M.dark,cols);
+const o=new THREE.Object3D();let k=0;
+for(let f=0;f<floors;f++){for(const s of[1]){o.position.set(JW.x,JW.y0+2+f*(JW.h-8)/floors,JW.z+JW.d/2+.25);o.updateMatrix();hMul.setMatrixAt(k++,o.matrix)}}
+hMul.count=k;
+for(let c=0;c<cols;c++){o.position.set(JW.x-JW.w/2+1+c*(JW.w-2)/(cols-1),JW.y0+JW.h/2-2,JW.z+JW.d/2+.25);o.updateMatrix();vMul.setMatrixAt(c,o.matrix)}
+scene.add(hMul,vMul);disposables.push(hMul,vMul);
+// JW lettering
+const lc=document.createElement('canvas');lc.width=512;lc.height=96;const lx=lc.getContext('2d');
+lx.fillStyle='#ece7da';lx.fillRect(0,0,512,96);lx.fillStyle='#26231f';lx.font='bold 54px Georgia';lx.textAlign='center';lx.textBaseline='middle';lx.fillText('JW MARRIOTT',256,50);
+const logo=new THREE.Mesh(new THREE.PlaneGeometry(26,4.9),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(lc)}));
+logo.position.set(JW.x,JW.y0+JW.h-3,JW.z+JW.d/2+.7);scene.add(logo);
+
+// GTC tower (right): vertical fins + crown + copper base + canopy
+const G={x:14,z:-10,w:24,d:24,h:176};
+box(G.w,G.h,G.d,G.x,0,G.z,M.con);
+box(G.w*.6,26,.4,G.x-G.w*.1,G.h-34,G.z+G.d/2+.1,M.glass,false);
+box(G.w+.6,G.h*.18,G.d+.6,G.x,0,G.z,M.cu,false);                 // copper base
+const nF=34;
+const fins=new THREE.InstancedMesh(new THREE.BoxGeometry(.7,G.h-4,2),M.sand,nF*2);
+k=0;for(let i=0;i<nF;i++){const x=G.x-G.w/2+.8+i*(G.w-1.6)/(nF-1);
+ o.position.set(x,G.h/2,G.z+G.d/2+1);o.updateMatrix();fins.setMatrixAt(k++,o.matrix);
+ o.position.set(G.x+G.w/2+1,G.h/2,G.z-G.d/2+.8+i*(G.d-1.6)/(nF-1));o.rotation.y=Math.PI/2;o.updateMatrix();fins.setMatrixAt(k++,o.matrix);o.rotation.y=0}
+fins.castShadow=true;scene.add(fins);disposables.push(fins);
+for(let i=0;i<14;i++)box(.5,.5,.5,0,0,0,M.dark,false).position.set(G.x-9+i*1.4,G.h+1,G.z+G.d/2); // crown teeth
+box(G.w+4,.8,9,G.x,10,G.z+G.d/2+4.5,M.steel);                    // canopy
+for(let i=0;i<8;i++)box(.3,.3,9,G.x-10+i*2.8,10.8,G.z+G.d/2+4.5,M.steel,false);
+box(5,G.h*.7,G.d+1,G.x-G.w/2-3,0,G.z,M.con); // slab fin on GTC side
+
+// pedestrian overpass "WALKWAY"
+const wk=new THREE.Group();
+const wl=box(44,3.4,5,0,0,0,M.glass,false);scene.remove(wl);wk.add(wl);
+const roof=box(46,.6,6,0,3.4,0,M.steel);scene.remove(roof);wk.add(roof);
+for(let i=0;i<10;i++){const d=box(.3,4,5.4,-20+i*4.4,0,0,M.steel,false);scene.remove(d);d.rotation.z=i%2?.6:-.6;wk.add(d)}
+wk.position.set(-66,6,40);wk.rotation.y=-.35;scene.add(wk);
+
+// elevated pool deck
+const deckY=15,pool=new THREE.Mesh(new THREE.PlaneGeometry(36,10),M.water);
+pool.rotation.x=-Math.PI/2;pool.position.set(-4,deckY+.1,10);scene.add(pool);
+box(40,.4,14,-4,deckY,10,M.cu,false).position.y-=.05;
+const lng=new THREE.InstancedMesh(new THREE.BoxGeometry(2.2,.5,.8),M.con,16);
+for(let i=0;i<16;i++){o.position.set(-18+i*2.4,deckY+.4,i%2?19:1);o.updateMatrix();lng.setMatrixAt(i,o.matrix)}scene.add(lng);disposables.push(lng);
+const umb=new THREE.InstancedMesh(new THREE.ConeGeometry(1.6,.9,8),new THREE.MeshStandardMaterial({color:0xfaf8f0}),20);
+for(let i=0;i<20;i++){o.position.set(-45+i*4.6,deckY+2.6,28);o.updateMatrix();umb.setMatrixAt(i,o.matrix)}scene.add(umb);disposables.push(umb);
+for(let i=0;i<3;i++)box(4,3,3,18+i*5,deckY,6,M.sand);               // cabanas
+box(112,1.1,.2,0,deckY,31.5,M.glass,false);                          // glass guardrail
+
+// sketchy tree billboards (canvas scribble)
+function treeTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+ x.strokeStyle='#2c2a24';x.fillStyle='rgba(120,145,100,.55)';x.lineWidth=1.2;x.lineCap='round';
+ x.fillRect(60,70,8,58);for(let i=0;i<46;i++){const a=Math.random()*6.28,r=Math.random()*38;x.beginPath();const px=64+Math.cos(a)*r,py=56+Math.sin(a)*r*.9;x.arc(px,py,8+Math.random()*10,0,6.28);x.fill();x.stroke()}
+ return new THREE.CanvasTexture(c)}
+const tt=treeTex();
+function tree(x,y,z,s){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tt,transparent:true,depthWrite:false}));sp.scale.set(s,s,1);sp.position.set(x,y+s/2,z);scene.add(sp);return sp}
+for(let i=0;i<22;i++){tree(-80+i*8,0,58+(i%3)*4,9+(i%4)*2);}
+for(let i=0;i<8;i++)tree(-50+i*10,deckY,22+(i%2)*6,5);
+for(let i=0;i<30;i++){tree((Math.random()-.5)*400,0,-70-Math.random()*250,14+Math.random()*10)}
+
+// surrounding abstract city blocks (low-poly)
+for(let i=0;i<70;i++){const x=(Math.random()-.5)*480,z=-50-Math.random()*300+(Math.random()<.3?340:0);
+ if(Math.abs(x)<70&&z>-60&&z<80)continue;
+ box(10+Math.random()*18,10+Math.random()*50,10+Math.random()*18,x,0,z,M.con);}
+
+// human silhouettes
+function person(x,y,z){const g=new THREE.Group();
+ const b=new THREE.Mesh(new THREE.CylinderGeometry(.35,.4,1.3,6),M.dark),h=new THREE.Mesh(new THREE.SphereGeometry(.28,6,5),M.dark);
+ b.position.y=.65;h.position.y=1.55;g.add(b,h);g.position.set(x,y,z);scene.add(g)}
+[[-70,7.4,39],[-62,7.4,41],[-54,7.4,44],[-8,deckY+.4,22],[0,deckY+.4,16],[10,deckY+.4,23],[14,0,G.z+G.d/2+10],[20,0,G.z+G.d/2+12],[40,0,50]].forEach(p=>person(...p));
+
+// annotation labels
+const labels=[['JW MARRIOTT',[JW.x,JW.y0+JW.h+3,JW.z+JW.d/2]],['CURTAIN WALL – TYPE A',[JW.x-JW.w/2-4,JW.y0+60,JW.z+JW.d/2]],['GTC TOWER – VERTICAL FIN DETAIL',[G.x+G.w/2+2,G.h*.75,G.z+G.d/2]],['COPPER ACCENT',[G.x+G.w/2+2,14,G.z+G.d/2]],['ELEVATED POOL DECK',[-4,deckY+6,10]],['PODIUM LEVEL',[50,12,31]],['WALKWAY',[-66,13,40]],['GROUND LEVEL',[0,4,31]]]
+.map(([t,p])=>{const e=document.createElement('div');e.className='lbl';e.textContent=t;document.body.appendChild(e);return{e,p:new THREE.Vector3(...p)}});
+
+// controls
+const ctl=new THREE.OrbitControls(cam,renderer.domElement);ctl.enableDamping=true;ctl.maxPolarAngle=1.5;ctl.minDistance=5;ctl.maxDistance=260;
+const box3=new THREE.Box3(new THREE.Vector3(-140,2,-120),new THREE.Vector3(140,190,140));
+const sketch={p:new THREE.Vector3(68,12,98),t:new THREE.Vector3(-4,78,-4)};
+cam.position.copy(sketch.p);ctl.target.copy(sketch.t);
+let view='sketch',tween=null;
+const path=new THREE.CatmullRomCurve3([[-80,12,70],[-40,16,60],[0,24,48],[30,22,38],[60,40,30],[55,80,10],[40,130,10],[70,190,60],[110,230,110]].map(a=>new THREE.Vector3(...a)),false,'catmullrom',.5);
+const look=new THREE.CatmullRomCurve3([[-50,10,40],[-10,18,20],[10,20,10],[25,50,0],[20,100,-5],[14,150,-8],[0,100,-10],[0,60,-10]].map(a=>new THREE.Vector3(...a)));
+let ft=0;
+const hint=document.getElementById('hint'),tele=document.getElementById('tele');
+function go(v){view=v;ctl.enabled=v!=='fly';tele.classList.toggle('on',v==='fly');
+ document.querySelectorAll('#hud button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));
+ hint.textContent={sketch:'Drag to look around a little',fly:'Flying past the walkway, pool deck and fins',free:'Drag to orbit, scroll or pinch to move closer'}[v];
+ ctl.maxPolarAngle=v==='sketch'?1.7:1.5;ctl.enableZoom=v!=='sketch';ctl.enablePan=v==='free';
+ if(v==='sketch')tween={t:0,p0:cam.position.clone(),t0:ctl.target.clone(),p1:sketch.p,t1:sketch.t};
+ if(v==='free')tween={t:0,p0:cam.position.clone(),t0:ctl.target.clone(),p1:new THREE.Vector3(-40,22,70),t1:new THREE.Vector3(0,20,0)};
+ if(v==='fly'){ft=0;tween=null}}
+document.querySelectorAll('#hud button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+
+const clock=new THREE.Clock(),tv=new THREE.Vector3(),fbEl=document.getElementById('fb'),t1=document.getElementById('t1'),t2=document.getElementById('t2'),ch=document.getElementById('ch');
+let raf;
+function frame(){raf=requestAnimationFrame(frame);const dt=Math.min(clock.getDelta(),.05),el=clock.elapsedTime;
+ M.water.emissiveIntensity=.3+Math.sin(el*2)*.08;
+ if(tween){tween.t=Math.min(1,tween.t+dt/1.6);const e=tween.t*tween.t*(3-2*tween.t);
+  cam.position.lerpVectors(tween.p0,tween.p1,e);ctl.target.lerpVectors(tween.t0,tween.t1,e);if(tween.t>=1)tween=null}
+ if(view==='fly'){ft=(ft+dt/32)%1;cam.position.copy(path.getPoint(ft));ctl.target.copy(look.getPoint(ft));cam.lookAt(ctl.target)}
+ else{ctl.target.clamp(box3.min,box3.max);cam.position.clamp(box3.min.clone().setY(1.5),new THREE.Vector3(260,260,260));if(view==='sketch'){const a=ctl.getAzimuthalAngle()}ctl.update()}
+ if(view==='fly'){const fov=cam.fov,w=innerWidth,h=innerHeight,bw=w*.6,bh=h*.6;
+  fbEl.setAttribute('x',(w-bw)/2);fbEl.setAttribute('y',(h-bh)/2);fbEl.setAttribute('width',bw);fbEl.setAttribute('height',bh);
+  ch.setAttribute('d',`M${w/2-14} ${h/2}h28M${w/2} ${h/2-14}v28`);
+  t1.setAttribute('x',(w-bw)/2);t1.setAttribute('y',(h-bh)/2-8);t1.textContent=`FOV ${fov}°  ·  ASPECT ${(w/h).toFixed(2)}`;
+  t2.setAttribute('x',(w-bw)/2);t2.setAttribute('y',(h+bh)/2+18);t2.textContent=`ALT ${cam.position.y.toFixed(0)} m  ·  RANGE ${cam.position.distanceTo(new THREE.Vector3(G.x,cam.position.y,G.z)).toFixed(0)} m`}
+ labels.forEach(l=>{tv.copy(l.p).project(cam);const vis=tv.z<1&&Math.abs(tv.x)<1.1&&Math.abs(tv.y)<1.1&&cam.position.distanceTo(l.p)<260;
+  l.e.style.opacity=vis?1:0;l.e.style.transform=`translate(${(tv.x*.5+.5)*innerWidth}px,${(-tv.y*.5+.5)*innerHeight}px)`});
+ renderer.render(scene,cam)}
+frame();
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+addEventListener('pagehide',()=>{cancelAnimationFrame(raf);scene.traverse(n=>{if(n.geometry)n.geometry.dispose();if(n.material){(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>{if(m.map)m.map.dispose();m.dispose()})}});disposables.forEach(d=>d.dispose());renderer.dispose()});
+})();
+</script>
+</body>
+</html>

@@ -40,14 +40,31 @@
     document.body.classList.remove("in-app", "in-screen", "in-vetting", "in-menu", "in-exec", "in-track", "in-twin", "in-atlas");
   }
 
-  function openTwin() {
+  const WORLDS = {
+    twin: "twin.html",
+    hyatt: "worlds/hyatt.html",
+    residence: "worlds/gtc-residence.html",
+    jw: "worlds/jw-gtc.html",
+    biophilic: "worlds/biophilic.html"
+  };
+
+  function openWorld(id) {
+    const src = WORLDS[id] || WORLDS.twin;
     leaveDesks();
     const frame = document.getElementById("twinFrame");
-    if (frame && !frame.getAttribute("src")) frame.src = "twin.html";
+    if (frame && frame.getAttribute("src") !== src) {
+      frame.src = src;
+      frame.title = id;
+    }
     document.getElementById("twin").hidden = false;
     document.body.classList.add("in-twin");
+    document.body.dataset.world = WORLDS[id] ? id : "twin";
     document.body.style.overflow = "hidden";
     if (typeof shellOn === "function") shellOn();
+  }
+
+  function openTwin() {
+    openWorld("twin");
   }
 
   function openAtlas() {
@@ -65,6 +82,7 @@
   }
 
   window.openTwin = openTwin;
+  window.openWorld = openWorld;
   window.openAtlas = openAtlas;
 
   function loadLeaflet() {
