@@ -31,14 +31,14 @@ export function createApp(config: AppConfig): Express {
   });
 
   if (config.nodeEnv === "production") {
-    const clientDir = path.resolve(process.cwd(), "client/dist");
-    app.use(express.static(clientDir));
+    const deskDir = path.resolve(process.cwd(), "floodsight");
+    app.use(express.static(deskDir));
     app.use((req, res, next) => {
       if (req.method !== "GET" && req.method !== "HEAD") {
         next();
         return;
       }
-      res.sendFile(path.join(clientDir, "index.html"), (error) => {
+      res.sendFile(path.join(deskDir, "index.html"), (error) => {
         if (error && !res.headersSent) next(error);
       });
     });

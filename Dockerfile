@@ -15,7 +15,7 @@ ENV PORT=8080
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && addgroup -S app && adduser -S app -G app
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/client/dist ./client/dist
+COPY floodsight ./floodsight
 RUN chown -R app:app /app
 USER app
 EXPOSE 8080
