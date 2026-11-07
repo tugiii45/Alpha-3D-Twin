@@ -4967,11 +4967,10 @@ function closeWorkspace() {
   document.body.classList.remove("in-screen", "in-vetting", "in-menu");
   hideMenu();
   document.getElementById("workspace").hidden = true;
-  document.querySelector(".stage").hidden = false;
+  document.querySelector(".stage").hidden = true;
   document.body.classList.remove("in-app");
-  setView("login");
-  resetAuthGo();
-  shellOn();
+  if (typeof openTwin === "function") openTwin();
+  else shellOn();
 }
 
 document.getElementById("wsHome").onclick = () => openMenu();
@@ -7559,8 +7558,8 @@ function paintGate(next) {
 }
 function openLogin() {
   document.getElementById("gate").hidden = true;
-  document.querySelector(".stage").hidden = false;
-  resetAuthGo();
+  document.querySelector(".stage").hidden = true;
+  if (typeof openTwin === "function") openTwin();
 }
 landRail.innerHTML = GATE_SLIDES.map((_, i) => `<button type="button" data-i="${i}" aria-label="Slide ${i + 1}"></button>`).join("");
 landThumbs.innerHTML = GATE_HOMES.map((item) => `<button type="button" data-slide="${item.slide}"><img src="photos/desk.jpg" alt="${item.alt}" style="object-position:${item.pos}"></button>`).join("");
