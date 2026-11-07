@@ -1,0 +1,20 @@
+---
+description: Full-stack TypeScript conventions for the hackathon starter
+alwaysApply: true
+---
+
+# Full-stack TypeScript
+
+- Strict TypeScript. Public contracts are interfaces. No `any`.
+- Routes validate input, call a service, and map `AppError` to JSON. No domain logic in routes.
+- Integrations live in `/services`. Read environment only through `/config/env.ts`.
+- HTTP shapes shared by client and server live in `/config/contracts.ts`.
+- One module, one job. Extend a placeholder method instead of adding a second client.
+- Prefer `fetch` over a new dependency.
+- Placeholder methods stay generic until a feature is specified.
+
+```ts
+const message = readSendSms(req.body);
+const result = await thrivewave.sendSMS(message.to, message.text);
+res.status(202).json(result);
+```

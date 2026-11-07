@@ -1,0 +1,30 @@
+# Hackathon starter
+
+Build features as small typed modules. This repo is a shell: routes, services, and screens stay generic until a product decision lands.
+
+## Types
+
+- `strict` TypeScript. Do not use `any`, and do not silence errors with assertions unless a boundary has already been narrowed.
+- Public contracts are `interface`s. Use a `type` alias for unions and mapped helpers.
+- Shared HTTP bodies live in `/config/contracts.ts` and are imported by the client and the server.
+- Environment values are read only in `/config/env.ts`.
+
+## Shape
+
+- `/server` validates input, calls one service method, and writes the response.
+- `/services` talks to outside systems. ThriveWave stays in `services/thrivewave.ts`. Model calls stay in `services/cursorAi.ts`.
+- `/client` renders and calls `/api`. Do not put provider keys or provider payload details in the client.
+- One module, one job. Extend an existing placeholder instead of adding a second client for the same system.
+- New domain behavior gets its own module under `server/src` or `client/src/components`. Do not bury it in a route or a provider client.
+
+## Errors and dependencies
+
+- Throw `AppError` with a stable `code` when a request should fail. The error handler turns that into `{ error: { code, message } }`.
+- Prefer `fetch` and the standard library. Add a dependency only when it replaces a real chunk of code.
+- Placeholder methods keep the signatures `sendSMS(to, text)`, `handleWebhook(payload)`, and `process({ prompt, system })`.
+
+```ts
+const message = readSendSms(req.body);
+const result = await thrivewave.sendSMS(message.to, message.text);
+res.status(202).json(result);
+```
