@@ -99,9 +99,9 @@
   function bootAtlas() {
     if (atlasMap) return;
     atlasMap = L.map("atlasMap", { zoomControl: false, attributionControl: true }).setView([-1.286, 36.835], 13);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      maxZoom: 20,
-      attribution: "&copy; OpenStreetMap &copy; CARTO"
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
     }).addTo(atlasMap);
     wardLayer = L.layerGroup().addTo(atlasMap);
     shelterLayer = L.layerGroup().addTo(atlasMap);
