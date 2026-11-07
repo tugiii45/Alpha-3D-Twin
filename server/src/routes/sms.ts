@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { timingSafeEqual } from "node:crypto";
 import type { SendSmsResponse, SmsWebhookResponse } from "../../../config/contracts";
 import type { AppConfig } from "../../../config/env";
 import { ThriveWaveClient } from "../../../services/thrivewave";
@@ -26,6 +27,14 @@ export function smsRouter(config: AppConfig): Router {
   router.post(
     "/webhook",
     asyncHandler(async (req, res) => {
+      if (!config.webhookToken) {
+        throw new AppError(503, "NOT_CONFIGURED", "Set SMS_WEBHOOK_TOKEN before accepting webhooks");
+      }
+      const expected = Buffer.from(config.webhookToken);
+      const supplied = Buffer.from(req.get("x-webhook-token") ?? "");
+      if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
+        throw new AppError(401, "UNAUTHORIZED", "Invalid webhook token");
+      }
       const result = client.handleWebhook(req.body);
       if (!result.accepted || !result.message) {
         throw new AppError(400, "BAD_REQUEST", "Unrecognized SMS payload");
