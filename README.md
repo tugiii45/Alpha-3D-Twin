@@ -61,6 +61,8 @@ Errors use `{ error: { code, message } }`. Missing credentials return `503` with
 
 `ThriveWaveClient.sendSMS(to, text)` posts to `{THRIVEWAVE_BASE_URL}/v1/message/send` with the `x-api-key` header and JSON `{ message, msisdn, sender_id? }`. ThriveVas returns a `transaction_id`; the app maps it to the response `id` and reports the initial status as queued. `THRIVEWAVE_SENDER_ID` is optional because the provider supplies a default.
 
+The SMS form accepts one or more comma-separated phone numbers and sends the same text to up to 50 recipients in a request.
+
 `handleWebhook(payload)` accepts a loose JSON body. Any of these shapes is enough:
 
 ```json
