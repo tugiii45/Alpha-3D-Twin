@@ -49,7 +49,7 @@ curl http://127.0.0.1:8080/api/health
 | GET | `/api/health` | | `{ status, service, time, integrations }` |
 | POST | `/api/ai/process` | `{ prompt, system? }` | `{ data, model }` |
 | POST | `/api/sms/send` | `{ to, text }` | `{ id, status }` |
-| POST | `/api/sms/webhook` | provider JSON | `{ accepted: true }` |
+| POST | `/api/sms/webhook` | provider JSON plus `X-Webhook-Token` | `{ accepted: true }` |
 
 Errors use `{ error: { code, message } }`. Missing credentials return `503` with code `NOT_CONFIGURED`. The process stays up so the health check still passes.
 
@@ -59,7 +59,9 @@ Errors use `{ error: { code, message } }`. Missing credentials return `503` with
 
 ### ThriveWave
 
-`ThriveWaveClient.sendSMS(to, text)` posts `{ to, text, sender_id }` to `{THRIVEWAVE_BASE_URL}/messages`. Change `SEND_PATH` in `services/thrivewave.ts` when the real path is known.
+`ThriveWaveClient.sendSMS(to, text)` posts to `{THRIVEWAVE_BASE_URL}/v1/message/send` with the `x-api-key` header and JSON `{ message, msisdn, sender_id? }`. ThriveVas returns a `transaction_id`; the app maps it to the response `id` and reports the initial status as queued. `THRIVEWAVE_SENDER_ID` is optional because the provider supplies a default.
+
+The SMS form accepts one or more comma-separated phone numbers and sends the same text to up to 50 recipients in a request.
 
 `handleWebhook(payload)` accepts a loose JSON body. Any of these shapes is enough:
 
@@ -67,19 +69,23 @@ Errors use `{ error: { code, message } }`. Missing credentials return `503` with
 { "from": "+15551212", "to": "+15550000", "text": "hello" }
 ```
 
-`from` may also be `msisdn` or `sender`. `text` may also be `body` or `message`. A nested `data` object is read the same way. The route acknowledges the message and does not store it or reply.
+`from` may also be `msisdn` or `sender`. `text` may also be `body` or `message`. A nested `data` object is read the same way. The route acknowledges the message and does not store it or reply. It requires `X-Webhook-Token` to match `SMS_WEBHOOK_TOKEN`; configure the same secret with the provider. If the provider cannot send a custom header, use its documented signature mechanism before enabling the webhook.
 
 ## Environment
 
 | Name | Purpose |
 | --- | --- |
 | `PORT` | Local listen port. Docker forces `8080`. |
-| `THRIVEWAVE_API_KEY` | Bearer token for send requests. |
-| `THRIVEWAVE_SENDER_ID` | Sent as `sender_id`. |
-| `THRIVEWAVE_BASE_URL` | Provider origin, without a trailing path. |
+| `CORS_ORIGINS` | Comma-separated browser origins allowed in production. |
+| `SMS_WEBHOOK_TOKEN` | Shared secret required for inbound SMS webhook requests. |
+| `THRIVEWAVE_API_KEY` | API key sent in the `x-api-key` header. |
+| `THRIVEWAVE_SENDER_ID` | Optional sender ID sent as `sender_id`. |
+| `THRIVEWAVE_BASE_URL` | Provider origin, for example `https://sms.thrivevas.com`, without a trailing path. |
 | `CURSOR_API_KEY` | Bearer token for chat completions. |
 | `CURSOR_BASE_URL` | OpenAI-compatible origin. Defaults to `https://api.openai.com`. |
 | `CURSOR_MODEL` | Model name. Defaults to `gpt-4o-mini`. |
+
+AI and SMS routes are limited per client IP to 30 and 20 requests per minute. This in-memory limit is per process; use a shared limiter when running multiple instances. Add application authentication before exposing these routes as a public multi-user service.
 
 ## Where a feature goes
 

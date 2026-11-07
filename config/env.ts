@@ -5,6 +5,8 @@ import { AppError } from "./errors";
 export interface AppConfig {
   port: number;
   nodeEnv: "development" | "production" | "test";
+  corsOrigins: string[];
+  webhookToken: string;
   thrivewave: {
     apiKey: string;
     senderId: string;
@@ -24,6 +26,8 @@ export function loadConfig(overrides: NodeJS.ProcessEnv = {}): AppConfig {
   return {
     port: readPort(env.PORT),
     nodeEnv: readNodeEnv(env.NODE_ENV),
+    corsOrigins: readList(env.CORS_ORIGINS),
+    webhookToken: readString(env.SMS_WEBHOOK_TOKEN),
     thrivewave: {
       apiKey: readString(env.THRIVEWAVE_API_KEY),
       senderId: readString(env.THRIVEWAVE_SENDER_ID),
@@ -35,6 +39,10 @@ export function loadConfig(overrides: NodeJS.ProcessEnv = {}): AppConfig {
       model: readString(env.CURSOR_MODEL) || "gpt-4o-mini",
     },
   };
+}
+
+function readList(value: string | undefined): string[] {
+  return (value ?? "").split(",").map((item) => item.trim()).filter(Boolean);
 }
 
 function readPort(value: string | undefined): number {
