@@ -10,9 +10,7 @@ export function healthRouter(config: AppConfig): Router {
       service: "hackathon-starter",
       time: new Date().toISOString(),
       integrations: {
-        thrivewave: Boolean(
-          config.thrivewave.apiKey && config.thrivewave.senderId && config.thrivewave.baseUrl,
-        ),
+        thrivewave: Boolean(config.thrivewave.apiKey && config.thrivewave.baseUrl),
         cursor: Boolean(config.cursor.apiKey),
       },
     };
