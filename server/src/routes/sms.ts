@@ -16,8 +16,15 @@ export function smsRouter(config: AppConfig): Router {
     "/send",
     asyncHandler(async (req, res) => {
       const body = asRecord(req.body);
+      const recipients = requiredString(body, "to").split(",").map((number) => number.trim());
+      if (recipients.some((number) => number.length === 0)) {
+        throw new AppError(400, "BAD_REQUEST", "Separate recipient numbers with commas and do not leave entries empty");
+      }
+      if (recipients.length > 50) {
+        throw new AppError(400, "BAD_REQUEST", "You can send one message to at most 50 numbers at a time");
+      }
       const result: SendSmsResponse = await client.sendSMS(
-        requiredString(body, "to"),
+        recipients.join(","),
         requiredString(body, "text"),
       );
       res.status(202).json(result);

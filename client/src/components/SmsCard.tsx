@@ -28,16 +28,18 @@ export function SmsCard() {
     <Panel title="SMS">
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-3">
         <label className="block text-sm">
-          <span className="text-stone-600">To</span>
+          <span className="text-stone-600">Recipient numbers</span>
           <input
             value={to}
             onChange={(event) => setTo(event.target.value)}
             required
+            placeholder="+254700000000, +254711111111"
             className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2"
           />
         </label>
+        <p className="text-xs text-stone-500">Send the same text to up to 50 numbers, separated by commas.</p>
         <label className="block text-sm">
-          <span className="text-stone-600">Text</span>
+          <span className="text-stone-600">Message for all recipients</span>
           <textarea
             value={text}
             onChange={(event) => setText(event.target.value)}
