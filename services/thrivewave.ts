@@ -2,8 +2,7 @@ import { AppError } from "../config/errors";
 import type { SendSmsResponse } from "../config/contracts";
 import { postJson } from "./http";
 
-/** Replace this path when the ThriveWave spec names the real send endpoint. */
-const SEND_PATH = "/messages";
+const SEND_PATH = "/v1/message/send";
 
 export interface ThriveWaveConfig {
   apiKey: string;
@@ -29,14 +28,12 @@ export class ThriveWaveClient {
 
   async sendSMS(to: string, text: string): Promise<SendSmsResponse> {
     this.assertConfigured();
+    const body: Record<string, string> = { message: text, msisdn: to };
+    if (this.config.senderId) body.sender_id = this.config.senderId;
     const payload = await postJson(
       `${this.config.baseUrl}${SEND_PATH}`,
-      {
-        to,
-        text,
-        sender_id: this.config.senderId,
-      },
-      { Authorization: `Bearer ${this.config.apiKey}` },
+      body,
+      { "x-api-key": this.config.apiKey },
     );
     return normalizeSendResult(payload);
   }
@@ -67,11 +64,11 @@ export class ThriveWaveClient {
   }
 
   private assertConfigured(): void {
-    if (!this.config.apiKey || !this.config.senderId || !this.config.baseUrl) {
+    if (!this.config.apiKey || !this.config.baseUrl) {
       throw new AppError(
         503,
         "NOT_CONFIGURED",
-        "Set THRIVEWAVE_API_KEY, THRIVEWAVE_SENDER_ID, and THRIVEWAVE_BASE_URL before sending SMS",
+        "Set THRIVEWAVE_API_KEY and THRIVEWAVE_BASE_URL before sending SMS",
       );
     }
   }
@@ -79,9 +76,16 @@ export class ThriveWaveClient {
 
 function normalizeSendResult(payload: unknown): SendSmsResponse {
   const record = asRecord(payload);
-  const id = record ? readString(record, ["id", "message_id", "messageId"]) : undefined;
+  const statusCode = record?.status;
+  if (typeof statusCode === "number" && statusCode >= 400) {
+    const message = (record ? readString(record, ["message"]) : undefined) ?? "Provider rejected the SMS request";
+    throw new AppError(502, "UPSTREAM", `ThriveVas ${statusCode}: ${message}`);
+  }
+  const rawId = record?.transaction_id ?? record?.id ?? record?.message_id ?? record?.messageId;
+  const id = typeof rawId === "number" || typeof rawId === "string" ? String(rawId) : undefined;
   if (!id) {
-    throw new AppError(502, "UPSTREAM", "ThriveWave response did not include an id");
+    const message = record ? readString(record, ["message"]) : undefined;
+    throw new AppError(502, "UPSTREAM", message ?? "ThriveVas response did not include a transaction id");
   }
   return {
     id,

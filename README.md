@@ -59,7 +59,7 @@ Errors use `{ error: { code, message } }`. Missing credentials return `503` with
 
 ### ThriveWave
 
-`ThriveWaveClient.sendSMS(to, text)` posts `{ to, text, sender_id }` to `{THRIVEWAVE_BASE_URL}/messages`. Change `SEND_PATH` in `services/thrivewave.ts` when the real path is known.
+`ThriveWaveClient.sendSMS(to, text)` posts to `{THRIVEWAVE_BASE_URL}/v1/message/send` with the `x-api-key` header and JSON `{ message, msisdn, sender_id? }`. ThriveVas returns a `transaction_id`; the app maps it to the response `id` and reports the initial status as queued. `THRIVEWAVE_SENDER_ID` is optional because the provider supplies a default.
 
 `handleWebhook(payload)` accepts a loose JSON body. Any of these shapes is enough:
 
@@ -76,9 +76,9 @@ Errors use `{ error: { code, message } }`. Missing credentials return `503` with
 | `PORT` | Local listen port. Docker forces `8080`. |
 | `CORS_ORIGINS` | Comma-separated browser origins allowed in production. |
 | `SMS_WEBHOOK_TOKEN` | Shared secret required for inbound SMS webhook requests. |
-| `THRIVEWAVE_API_KEY` | Bearer token for send requests. |
-| `THRIVEWAVE_SENDER_ID` | Sent as `sender_id`. |
-| `THRIVEWAVE_BASE_URL` | Provider origin, without a trailing path. |
+| `THRIVEWAVE_API_KEY` | API key sent in the `x-api-key` header. |
+| `THRIVEWAVE_SENDER_ID` | Optional sender ID sent as `sender_id`. |
+| `THRIVEWAVE_BASE_URL` | Provider origin, for example `https://sms.thrivevas.com`, without a trailing path. |
 | `CURSOR_API_KEY` | Bearer token for chat completions. |
 | `CURSOR_BASE_URL` | OpenAI-compatible origin. Defaults to `https://api.openai.com`. |
 | `CURSOR_MODEL` | Model name. Defaults to `gpt-4o-mini`. |
